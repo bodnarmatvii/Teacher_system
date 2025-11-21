@@ -12,26 +12,28 @@
     body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; }
     * { box-sizing: border-box; }
 
-    /* ЛОГІН */
+    /* LOGIN */
     .login-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
     .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 100%; max-width: 360px; text-align: center; }
-    select, input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+    select, input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; }
     .btn-primary { width: 100%; padding: 14px; background: #2c3e50; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
     .error-text { color: #e74c3c; font-size: 14px; margin-top: 10px; min-height: 20px; }
 
-    /* ШАПКА */
+    /* HEADER */
     header { background: #2c3e50; color: white; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); flex-shrink: 0; }
     .nav-btn { background: rgba(255,255,255,0.1); border: none; color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .user-info { text-align: center; line-height: 1.2; }
+    .user-name { font-weight: bold; font-size: 15px; }
+    .user-role { font-size: 11px; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; }
+
+    /* BODY & GRID */
     .app-body { flex: 1; overflow-y: auto; }
-    
-    /* МОДУЛІ */
     .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; padding: 20px; max-width: 800px; margin: 0 auto; }
-    .module-card { background: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; height: 140px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    .module-card { background: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; height: 140px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid transparent; }
     .module-card:active { transform: scale(0.95); }
     .module-icon { font-size: 36px; margin-bottom: 10px; color: #2c3e50; }
     .module-title { font-weight: bold; color: #333; }
     
-    /* Toast */
     .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; z-index: 999; }
   </style>
 </head>
@@ -41,15 +43,12 @@
   <template x-if="!isLoggedIn">
     <div class="login-wrapper">
       <div class="card">
-        <h2 style="margin-top:0; color:#2c3e50;">Вхід</h2>
-        
+        <h2 style="margin-top:0; color:#2c3e50;">Teacher ID</h2>
         <select x-model="form.id" :disabled="loading">
           <option value="">Оберіть себе...</option>
           <template x-for="u in loginList" :key="u.id"><option :value="u.id" x-text="u.name"></option></template>
         </select>
-        
         <input type="password" x-model="form.pass" placeholder="Пароль" @keyup.enter="login()">
-        
         <button class="btn-primary" @click="login()" :disabled="loading">
           <span x-text="loading ? '...' : 'Увійти'"></span>
         </button>
@@ -66,9 +65,9 @@
         </button>
         <div style="width:40px;" x-show="history.length === 0"></div>
 
-        <div style="text-align:center;">
-          <div style="font-weight:bold; font-size:16px;" x-text="pageTitle"></div>
-          <div style="font-size:11px; opacity:0.7;" x-text="user.name"></div>
+        <div class="user-info">
+          <div class="user-name" x-text="pageTitle === 'Головна' ? user.name : pageTitle"></div>
+          <div x-show="pageTitle === 'Головна'" class="user-role" x-text="user.role"></div>
         </div>
 
         <button class="nav-btn" @click="logout()"><span class="material-icons-round">logout</span></button>
@@ -102,14 +101,18 @@
 
         canAccess(module) {
           if (!this.isLoggedIn) return false;
-          if (!this.user.role || this.user.role === 'admin') return true;
+          var r = (this.user.role || "").toLowerCase();
+          // Адмін має доступ до всього
+          if (r === 'admin') return true;
           if (this.user.permissions.includes('*')) return true;
+          // Перевіряємо конкретне право
           return this.user.permissions.includes(module);
         },
 
         navigate(view, title) {
           this.history.push({ view: this.currentView, title: this.pageTitle });
-          this.currentView = view; this.pageTitle = title || 'Модуль';
+          this.currentView = view; 
+          this.pageTitle = title || 'Модуль';
         },
         goBack() {
           if (this.history.length) {
@@ -117,7 +120,6 @@
             this.currentView = prev.view; this.pageTitle = prev.title;
           }
         },
-
         loadList() {
           this.loading = true;
           google.script.run.withSuccessHandler(d => { this.loginList = d; this.loading = false; }).getLoginList();
@@ -140,6 +142,13 @@
           this.isLoggedIn = false; this.history = []; this.currentView = 'dashboard'; this.loadList();
         },
         setUser(u) { this.user = u; this.isLoggedIn = true; this.currentView = 'dashboard'; this.pageTitle = 'Головна'; },
+        
+        sendMark(val) {
+          if(!this.topic) { this.showToast("⚠️ Вкажіть тему!"); return; }
+          this.showToast("⏳ Збереження...");
+          const token = localStorage.getItem('auth_token');
+          google.script.run.withSuccessHandler(r => this.showToast(r)).apiSaveLog(token, val, this.topic);
+        },
         showToast(msg) { this.toastMsg = msg; setTimeout(() => this.toastMsg = '', 3000); }
       }
     }
