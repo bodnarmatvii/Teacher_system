@@ -41,21 +41,24 @@
 <body x-data="app()" x-cloak>
 
   <template x-if="!isLoggedIn">
-    <div class="login-wrapper">
-      <div class="card">
-        <h2 style="margin-top:0; color:#2c3e50;">Teacher ID</h2>
-        <select x-model="form.id" :disabled="loading">
-          <option value="">Оберіть себе...</option>
-          <template x-for="u in loginList" :key="u.id"><option :value="u.id" x-text="u.name"></option></template>
-        </select>
-        <input type="password" x-model="form.pass" placeholder="Пароль" @keyup.enter="login()">
-        <button class="btn-primary" @click="login()" :disabled="loading">
-          <span x-text="loading ? '...' : 'Увійти'"></span>
-        </button>
-        <div class="error-text" x-text="errorMsg"></div>
-      </div>
+  <div class="login-wrapper">
+    <div class="card">
+      <h2 style="margin-top:0; color:#2c3e50;">Teacher System</h2>
+      
+      <input type="text" x-model="form.login" style="margin-bottom: 5px;" 
+             placeholder="📧 Пошта або 📞 Телефон" :disabled="loading" 
+             @keyup.enter="login()">
+      
+      <input type="password" x-model="form.pass" placeholder="Пароль" 
+             @keyup.enter="login()" :disabled="loading">
+      
+      <button class="btn-primary" @click="login()" :disabled="loading || !form.login || !form.pass">
+        <span x-text="loading ? '⏳' : 'Увійти'"></span>
+      </button>
+      <div class="error-text" x-text="errorMsg"></div>
     </div>
-  </template>
+  </div>
+</template>
 
   <template x-if="isLoggedIn">
     <div style="display: flex; flex-direction: column; height: 100%;">
@@ -87,71 +90,71 @@
   <div x-show="toastMsg" x-transition.opacity class="toast" x-text="toastMsg"></div>
 
   <script>
-    function app() {
-      return {
-        isLoggedIn: false, loading: false, loginList: [], errorMsg: '', toastMsg: '',
-        user: { name: '', id: '', role: '', permissions: [] },
-        form: { id: '', pass: '' },
-        currentView: 'dashboard', pageTitle: 'Головна', history: [],
+  function app() {
+    return {
+      isLoggedIn: false, loading: false, loginList: [], errorMsg: '', toastMsg: '',
+      user: { name: '', id: '', role: '', permissions: [] },
+      form: { login: '', pass: '' }, // 👈 ЗМІНА 1: Використовуємо 'login' замість 'id'
+      currentView: 'dashboard', pageTitle: 'Головна', history: [],
 
-        init() {
-          const token = localStorage.getItem('auth_token');
-          if (token) this.checkSession(token); else this.loadList();
-        },
+      init() {
+        const token = localStorage.getItem('auth_token');
+        if (token) this.checkSession(token); 
+        // 👈 ЗМІНА 2: Видалено loadList(), оскільки список ID більше не потрібен
+      },
 
-        canAccess(module) {
-          if (!this.isLoggedIn) return false;
-          var r = (this.user.role || "").toLowerCase();
-          // Адмін має доступ до всього
-          if (r === 'admin') return true;
-          if (this.user.permissions.includes('*')) return true;
-          // Перевіряємо конкретне право
-          return this.user.permissions.includes(module);
-        },
+      canAccess(module) {
+        if (!this.isLoggedIn) return false;
+        var r = (this.user.role || "").toLowerCase();
+        // Адмін має доступ до всього
+        if (r === 'admin') return true;
+        if (this.user.permissions.includes('*')) return true;
+        // Перевіряємо конкретне право
+        return this.user.permissions.includes(module);
+      },
 
-        navigate(view, title) {
-          this.history.push({ view: this.currentView, title: this.pageTitle });
-          this.currentView = view; 
-          this.pageTitle = title || 'Модуль';
-        },
-        goBack() {
-          if (this.history.length) {
-            const prev = this.history.pop();
-            this.currentView = prev.view; this.pageTitle = prev.title;
-          }
-        },
-        loadList() {
-          this.loading = true;
-          google.script.run.withSuccessHandler(d => { this.loginList = d; this.loading = false; }).getLoginList();
-        },
-        login() {
-          this.loading = true; this.errorMsg = '';
-          google.script.run.withSuccessHandler(res => {
-            this.loading = false;
-            if(res.success) { localStorage.setItem('auth_token', res.token); this.setUser(res.user); }
-            else this.errorMsg = res.msg;
-          }).apiLogin(this.form.id, this.form.pass);
-        },
-        checkSession(token) {
-          google.script.run.withSuccessHandler(res => {
-            if(res.success) this.setUser(res.user); else this.logout();
-          }).apiMe(token);
-        },
-        logout() {
-          localStorage.removeItem('auth_token');
-          this.isLoggedIn = false; this.history = []; this.currentView = 'dashboard'; this.loadList();
-        },
-        setUser(u) { this.user = u; this.isLoggedIn = true; this.currentView = 'dashboard'; this.pageTitle = 'Головна'; },
-        
-        sendMark(val) {
-          if(!this.topic) { this.showToast("⚠️ Вкажіть тему!"); return; }
-          this.showToast("⏳ Збереження...");
-          const token = localStorage.getItem('auth_token');
-          google.script.run.withSuccessHandler(r => this.showToast(r)).apiSaveLog(token, val, this.topic);
-        },
-        showToast(msg) { this.toastMsg = msg; setTimeout(() => this.toastMsg = '', 3000); }
-      }
+      navigate(view, title) {
+        this.history.push({ view: this.currentView, title: this.pageTitle });
+        this.currentView = view; 
+        this.pageTitle = title || 'Модуль';
+      },
+      goBack() {
+        if (this.history.length) {
+          const prev = this.history.pop();
+          this.currentView = prev.view; this.pageTitle = prev.title;
+        }
+      },
+      // loadList() функцію видаляємо, вона більше не потрібна
+      
+      login() {
+        this.loading = true; this.errorMsg = '';
+        google.script.run.withSuccessHandler(res => {
+          this.loading = false;
+          if(res.success) { localStorage.setItem('auth_token', res.token); this.setUser(res.user); }
+          else this.errorMsg = res.msg;
+        }).apiLogin(this.form.login, this.form.pass); // 👈 ЗМІНА 3: Передаємо this.form.login
+      },
+      checkSession(token) {
+        google.script.run.withSuccessHandler(res => {
+          if(res.success) this.setUser(res.user); else this.logout();
+        }).apiMe(token);
+      },
+      logout() {
+        localStorage.removeItem('auth_token');
+        this.isLoggedIn = false; this.history = []; this.currentView = 'dashboard';
+        // loadList() більше не викликаємо
+      },
+      setUser(u) { this.user = u; this.isLoggedIn = true; this.currentView = 'dashboard'; this.pageTitle = 'Головна'; },
+      
+      sendMark(val) {
+        if(!this.topic) { this.showToast("⚠️ Вкажіть тему!"); return; }
+        this.showToast("⏳ Збереження...");
+        const token = localStorage.getItem('auth_token');
+        google.script.run.withSuccessHandler(r => this.showToast(r)).apiSaveLog(token, val, this.topic);
+      },
+      showToast(msg) { this.toastMsg = msg; setTimeout(() => this.toastMsg = '', 3000); }
     }
-  </script>
+  }
+</script>
 </body>
 </html>

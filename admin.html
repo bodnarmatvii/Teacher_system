@@ -1,87 +1,191 @@
-<div x-data="adminPanel()" x-init="initAdmin()" style="max-width:800px; margin:0 auto; padding:10px;">
+<div x-data="adminPanel()" x-init="initAdmin()" class="admin-container">
   
-  <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px;">
-    <button class="module-card" style="height:auto; padding:10px 20px; font-size:14px; width:auto;" 
-            :style="tab === 'users' ? 'background:#2c3e50; color:white;' : ''"
+  <div class="admin-tabs">
+    <button class="tab-btn" 
+            :class="{'active': tab === 'users'}" 
             @click="tab = 'users'">
-       👥 Юзери
+       <span class="material-icons-round">people</span> Користувачі
     </button>
-    <button class="module-card" style="height:auto; padding:10px 20px; font-size:14px; width:auto;" 
-            :style="tab === 'roles' ? 'background:#2c3e50; color:white;' : ''"
+    <button class="tab-btn" 
+            :class="{'active': tab === 'roles'}" 
             @click="tab = 'roles'">
-       🛡️ Права
+       <span class="material-icons-round">security</span> Ролі та Доступи
     </button>
   </div>
 
-  <div x-show="tab === 'users'">
-    <table style="width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden;">
-      <tr style="background:#f8f9fa; text-align:left; border-bottom:2px solid #eee;">
-        <th style="padding:10px;">Ім'я</th>
-        <th style="padding:10px;">Роль</th>
-        <th style="padding:10px;">Дія</th>
-      </tr>
-      <template x-for="u in users" :key="u.id">
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;">
-             <div x-text="u.name" style="font-weight:bold; font-size:14px;"></div>
-             <div x-text="'ID: ' + u.id" style="font-size:11px; color:#999;"></div>
-          </td>
-          <td style="padding:10px;">
-            <select x-model="u.role" style="padding:5px; border-radius:4px; border:1px solid #ddd;">
-              <option value="">(User)</option>
-              <option value="admin">Admin</option>
-              <option value="teacher">Teacher</option>
-              <option value="methodist">Methodist</option>
-            </select>
-          </td>
-          <td style="padding:10px;">
-            <button @click="saveUserRole(u)" style="padding:5px 10px; background:#1a73e8; color:white; border:none; border-radius:4px; cursor:pointer;">Save</button>
-          </td>
-        </tr>
-      </template>
-    </table>
+  <div x-show="tab === 'users'" class="fade-in">
+    <div class="table-wrapper">
+      <table class="modern-table">
+        <thead>
+          <tr>
+            <th>Користувач</th>
+            <th>Поточна Роль</th>
+            <th style="text-align:right">Дія</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="u in users" :key="u.id">
+            <tr>
+              <td>
+                 <div class="user-cell-name" x-text="u.name"></div>
+                 <div class="user-cell-id" x-text="'ID: ' + u.id"></div>
+              </td>
+              <td>
+                <select x-model="u.role" class="role-select">
+                  <option value="">(Користувач)</option>
+                  <option value="admin">Admin</option>
+                  <option value="teacher">Teacher</option>
+                  <option value="methodist">Methodist</option>
+                </select>
+              </td>
+              <td style="text-align:right">
+                <button @click="saveUserRole(u)" class="btn-save">
+                  <span class="material-icons-round" style="font-size:18px">save</span>
+                </button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <div x-show="tab === 'roles'" style="display:flex; gap:15px; align-items:flex-start; flex-wrap:wrap;">
+  <div x-show="tab === 'roles'" class="roles-layout fade-in">
     
-    <div style="width: 160px; flex-shrink:0;">
-      <div style="font-size:12px; font-weight:bold; color:#999; margin-bottom:5px;">ОБЕРІТЬ РОЛЬ:</div>
-      <template x-for="r in rolesConfig" :key="r.name">
-        <div @click="selectEntity(r)" 
-             class="module-card" 
-             style="height:auto; padding:10px; margin-bottom:5px; text-align:left; align-items:center; flex-direction:row; justify-content:space-between;"
-             :style="selectedEntity.name === r.name ? 'border-color:#1a73e8; background:#f0f7ff;' : ''">
-          <div style="font-weight:bold; font-size:13px;" x-text="r.name"></div>
-        </div>
-      </template>
-      <button @click="addNewEntity()" style="width:100%; margin-top:5px; padding:8px; border:1px dashed #ccc; background:none; cursor:pointer; font-size:11px; color:#666;">+ Додати</button>
+    <div class="roles-sidebar">
+      <div class="sidebar-header">РОЛІ СИСТЕМИ</div>
+      
+      <div class="roles-list">
+        <template x-for="r in rolesConfig" :key="r.name">
+          <div @click="selectEntity(r)" 
+               class="role-item" 
+               :class="{'active': selectedEntity.name === r.name}">
+            <span class="material-icons-round role-icon">badge</span>
+            <span x-text="r.name" class="role-name"></span>
+            <span class="material-icons-round chevron">chevron_right</span>
+          </div>
+        </template>
+      </div>
+      
+      <button @click="addNewEntity()" class="btn-add-role">
+        <span class="material-icons-round">add</span> Нова роль
+      </button>
     </div>
 
-    <div style="flex:1; background:white; padding:20px; border-radius:12px; min-width:250px;" x-show="selectedEntity.name">
-      <h3 style="margin-top:0; padding-bottom:10px; border-bottom:1px solid #eee;">
-        Права: <span x-text="selectedEntity.name" style="color:#1a73e8;"></span>
-      </h3>
+    <div class="roles-content" x-show="selectedEntity.name">
+      <div class="content-header">
+        <h2>Налаштування прав</h2>
+        <div class="chip" x-text="selectedEntity.name"></div>
+      </div>
 
-      <template x-for="cat in getCategories()" :key="cat">
-        <div style="margin-bottom:15px;">
-          <div style="font-size:11px; font-weight:bold; color:#999; margin-bottom:5px; text-transform:uppercase;" x-text="cat"></div>
-          <div style="display:grid; grid-template-columns: 1fr; gap:5px;">
-            <template x-for="cap in capabilities.filter(c => c.category === cat)" :key="cap.key">
-              <label style="display:flex; align-items:center; gap:10px; padding:6px; background:#f9f9f9; border-radius:4px; cursor:pointer;">
-                <input type="checkbox" :value="cap.key" x-model="selectedEntity.permissions">
-                <span x-text="cap.label" style="font-size:13px;"></span>
-              </label>
-            </template>
+      <div class="permissions-grid">
+        <template x-for="cat in getCategories()" :key="cat">
+          <div class="perm-group">
+            <div class="perm-category-title" x-text="cat"></div>
+            
+            <div class="perm-items">
+              <template x-for="cap in capabilities.filter(c => c.category === cat)" :key="cap.key">
+                <label class="perm-card" :class="{'checked': selectedEntity.permissions.includes(cap.key)}">
+                  <input type="checkbox" :value="cap.key" x-model="selectedEntity.permissions" class="hidden-checkbox">
+                  <div class="perm-info">
+                    <span class="perm-label" x-text="cap.label"></span>
+                    <span class="perm-key" x-text="cap.key"></span>
+                  </div>
+                  <div class="toggle-indicator"></div>
+                </label>
+              </template>
+            </div>
           </div>
-        </div>
-      </template>
+        </template>
+      </div>
 
-      <div style="margin-top:20px; padding-top:10px; border-top:1px solid #eee;">
-        <button class="btn-primary" @click="saveCurrentRoleConfig()">Зберегти налаштування</button>
+      <div class="content-footer">
+        <button class="btn-primary-large" @click="saveCurrentRoleConfig()">
+          Зберегти зміни
+        </button>
       </div>
     </div>
 
+    <div class="roles-content empty-state" x-show="!selectedEntity.name">
+      <span class="material-icons-round" style="font-size:48px; color:#ccc">touch_app</span>
+      <p>Оберіть роль зі списку зліва,<br>щоб налаштувати доступ.</p>
+    </div>
+
   </div>
+
+  <style>
+    .admin-container { max-width: 1000px; margin: 0 auto; padding: 20px; height: 100%; display: flex; flex-direction: column; }
+    
+    /* TABS */
+    .admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #e0e0e0; padding-bottom: 1px; }
+    .tab-btn { background: none; border: none; padding: 10px 20px; cursor: pointer; font-size: 15px; color: #666; display: flex; align-items: center; gap: 8px; border-bottom: 3px solid transparent; transition: 0.2s; }
+    .tab-btn:hover { color: #333; background: #f5f5f5; border-radius: 8px 8px 0 0; }
+    .tab-btn.active { color: #1a73e8; border-bottom-color: #1a73e8; font-weight: 600; }
+
+    /* USERS TABLE */
+    .table-wrapper { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; }
+    .modern-table { width: 100%; border-collapse: collapse; }
+    .modern-table th { background: #f8f9fa; padding: 15px; text-align: left; font-size: 12px; color: #666; text-transform: uppercase; font-weight: 600; border-bottom: 1px solid #eee; }
+    .modern-table td { padding: 15px; border-bottom: 1px solid #eee; vertical-align: middle; }
+    .modern-table tr:last-child td { border-bottom: none; }
+    .user-cell-name { font-weight: 600; color: #333; font-size: 14px; }
+    .user-cell-id { font-size: 11px; color: #999; margin-top: 2px; }
+    .role-select { padding: 8px 12px; border-radius: 6px; border: 1px solid #ddd; width: 100%; max-width: 150px; font-size: 14px; color: #333; outline: none; }
+    .btn-save { width: 36px; height: 36px; border-radius: 50%; border: none; background: #e8f0fe; color: #1a73e8; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: 0.2s; }
+    .btn-save:hover { background: #1a73e8; color: white; }
+
+    /* ROLES LAYOUT */
+    .roles-layout { display: flex; gap: 20px; height: calc(100vh - 140px); min-height: 500px; }
+    
+    /* SIDEBAR */
+    .roles-sidebar { width: 240px; flex-shrink: 0; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
+    .sidebar-header { padding: 15px; font-size: 11px; font-weight: 700; color: #999; letter-spacing: 1px; border-bottom: 1px solid #eee; background: #fcfcfc; }
+    .roles-list { flex: 1; overflow-y: auto; padding: 10px; }
+    .role-item { display: flex; align-items: center; padding: 12px; margin-bottom: 4px; border-radius: 8px; cursor: pointer; transition: 0.2s; color: #444; }
+    .role-item:hover { background: #f5f5f5; }
+    .role-item.active { background: #e8f0fe; color: #1a73e8; font-weight: 600; }
+    .role-icon { font-size: 18px; margin-right: 10px; opacity: 0.7; }
+    .role-name { flex: 1; font-size: 14px; }
+    .chevron { font-size: 16px; opacity: 0.3; }
+    .btn-add-role { margin: 10px; padding: 10px; border: 1px dashed #ccc; border-radius: 8px; background: none; color: #666; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; }
+    .btn-add-role:hover { border-color: #1a73e8; color: #1a73e8; background: #f0f7ff; }
+
+    /* CONTENT AREA */
+    .roles-content { flex: 1; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; overflow: hidden; }
+    .roles-content.empty-state { align-items: center; justify-content: center; text-align: center; color: #999; }
+    
+    .content-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px; }
+    .content-header h2 { margin: 0; font-size: 18px; color: #2c3e50; }
+    .chip { background: #2c3e50; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+
+    .permissions-grid { flex: 1; overflow-y: auto; padding: 20px; }
+    .perm-group { margin-bottom: 25px; }
+    .perm-category-title { font-size: 12px; font-weight: 700; color: #999; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    
+    .perm-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+    
+    /* PERMISSION CARD (CHECKBOX) */
+    .perm-card { display: flex; align-items: center; padding: 12px; border: 1px solid #eee; border-radius: 8px; cursor: pointer; transition: 0.2s; position: relative; }
+    .perm-card:hover { border-color: #ccc; background: #fafafa; }
+    .perm-card.checked { border-color: #c2e0ff; background: #f0f7ff; }
+    .hidden-checkbox { display: none; }
+    .perm-info { flex: 1; display: flex; flex-direction: column; }
+    .perm-label { font-size: 14px; font-weight: 500; color: #333; }
+    .perm-key { font-size: 10px; color: #999; margin-top: 2px; font-family: monospace; }
+    
+    /* TOGGLE SWITCH */
+    .toggle-indicator { width: 40px; height: 20px; background: #ddd; border-radius: 10px; position: relative; transition: 0.2s; flex-shrink: 0; margin-left: 10px; }
+    .toggle-indicator::after { content: ''; position: absolute; width: 16px; height: 16px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .perm-card.checked .toggle-indicator { background: #1a73e8; }
+    .perm-card.checked .toggle-indicator::after { left: 22px; }
+
+    .content-footer { padding: 20px; border-top: 1px solid #eee; text-align: right; background: #fafafa; }
+    .btn-primary-large { padding: 12px 24px; background: #2c3e50; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .btn-primary-large:hover { background: #34495e; transform: translateY(-1px); }
+    
+    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
 
   <script>
     function adminPanel() {
@@ -107,7 +211,7 @@
           google.script.run.withSuccessHandler(res => app().showToast(res.msg)).apiUpdateUserRole(u.id, u.role);
         },
         saveCurrentRoleConfig() {
-          app().showToast("Оновлення прав...");
+          app().showToast("Збереження прав...");
           let idx = this.rolesConfig.findIndex(r => r.name === this.selectedEntity.name);
           if(idx >= 0) this.rolesConfig[idx].permissions = this.selectedEntity.permissions;
           else this.rolesConfig.push(this.selectedEntity);

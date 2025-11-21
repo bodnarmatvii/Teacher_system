@@ -45,32 +45,60 @@ function apiGetModuleConfig() {
 // 3. АВТОРИЗАЦІЯ ТА ПРАВА (RBAC)
 // ==========================================
 
-function apiLogin(userId, passwordInput) {
-  var ss = SpreadsheetApp.openById(AUTH_SHEET_ID);
-  var sheet = ss.getSheetByName('Аркуш1'); 
-  var data = sheet.getDataRange().getValues();
-  
-  var userRowIndex = -1;
-  var storedHash = "", role = "";
+function apiLogin(loginInput, passwordInput) {
+  var normalizedLogin = _normalizeLogin(loginInput);
+  if (!normalizedLogin) return {success: false, msg: "Введіть логін"};
 
-  for (var i = 1; i < data.length; i++) {
-    if (data[i][0] == userId) {
-      userRowIndex = i + 1;
-      storedHash = data[i][1]; 
-      role = data[i][4] ? data[i][4].toString() : ""; 
+  var ssAuth = SpreadsheetApp.openById(AUTH_SHEET_ID);
+  var sheetAuth = ssAuth.getSheetByName('Аркуш1'); 
+  var dataAuth = sheetAuth.getDataRange().getValues();
+  
+  // 1. Зчитуємо дані користувачів (де є пошта/телефон)
+  var ssTeachers = SpreadsheetApp.openById(TEACHER_SHEET_ID); 
+  var sheetTeachers = ssTeachers.getSheetByName('Аркуш1');
+  var dataTeachers = sheetTeachers.getDataRange().getValues();
+
+  var userRowIndexInAuth = -1;
+  var userId = null;
+  var storedHash = "";
+  var role = "";
+
+  // 2. Знаходимо користувача за email/phone в таблиці Teachers
+  // Припускаємо, що: Стовпець A - ID, C - Mail, D - Phone
+  for (var i = 1; i < dataTeachers.length; i++) {
+    var teacherId = dataTeachers[i][0];
+    var email = _normalizeLogin(dataTeachers[i][2]); // Mail - стовпець C (індекс 2)
+    var phone = _normalizeLogin(dataTeachers[i][3]); // Phone - стовпець D (індекс 3)
+    
+    if (teacherId && (normalizedLogin === email || normalizedLogin === phone)) {
+      userId = teacherId;
       break;
     }
   }
 
-  if (userRowIndex === -1) return {success: false, msg: "ID не знайдено"};
+  if (!userId) return {success: false, msg: "Користувача не знайдено"};
+
+  // 3. Знаходимо хеш та роль за знайденим ID в таблиці Auth
+  // Припускаємо, що: Стовпець A - ID, B - Hash, E - Role
+  for (var i = 1; i < dataAuth.length; i++) {
+    if (dataAuth[i][0] == userId) {
+      userRowIndexInAuth = i + 1;
+      storedHash = dataAuth[i][1]; 
+      role = dataAuth[i][4] ? dataAuth[i][4].toString() : ""; 
+      break;
+    }
+  }
+  
+  if (userRowIndexInAuth === -1) return {success: false, msg: "Дані авторизації відсутні"};
   if (_hash(passwordInput) !== storedHash) return {success: false, msg: "Невірний пароль"};
 
+  // 4. Оновлюємо токен
   var token = Utilities.getUuid();
   var expireDate = new Date(); 
   expireDate.setHours(expireDate.getHours() + AUTH_TTL_HOURS);
   
-  sheet.getRange(userRowIndex, 3).setValue(token); 
-  sheet.getRange(userRowIndex, 4).setValue(expireDate.toISOString());
+  sheetAuth.getRange(userRowIndexInAuth, 3).setValue(token); 
+  sheetAuth.getRange(userRowIndexInAuth, 4).setValue(expireDate.toISOString());
 
   var userName = _getUserNameById(userId);
   var permissions = _getPermissions(userId, role); 
@@ -280,11 +308,78 @@ function _getNameMap() {
   return map;
 }
 
+// ==========================================
+// 5. HELPERS (ЗМІНЕНО)
+// ==========================================
+
+// ⚠️ ВАЖЛИВО: Змініть цей рядок на свій унікальний набір символів!
+// Це зробить ваші паролі захищеними навіть якщо базу вкрадуть.
+var GLOBAL_SALT = "My_SuP3r_S3cr3t_S@lt_2025_!#ChangeMe"; 
+
+function getLoginList() {
+  var ss = SpreadsheetApp.openById(TEACHER_SHEET_ID); 
+  var sheet = ss.getSheetByName('Аркуш1'); 
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  var data = sheet.getRange(2, 1, lastRow - 1, 2).getValues();
+  return data.filter(r => r[0] !== "").map(r => ({id: r[0], name: r[1]}));
+}
+
+function _getUserNameById(id) {
+  var ss = SpreadsheetApp.openById(TEACHER_SHEET_ID); 
+  var sheet = ss.getSheetByName('Аркуш1');
+  var data = sheet.getDataRange().getValues();
+  for(var i=1; i<data.length; i++) if(data[i][0]==id) return data[i][1];
+  return "Unknown";
+}
+
+function _getNameMap() {
+  var ss = SpreadsheetApp.openById(TEACHER_SHEET_ID); 
+  var sheet = ss.getSheetByName('Аркуш1');
+  var data = sheet.getRange(2, 1, sheet.getLastRow()-1, 2).getValues(); 
+  var map={}; 
+  data.forEach(r => map[r[0]] = r[1]); 
+  return map;
+}
+
+// ОНОВЛЕНА ФУНКЦІЯ ХЕШУВАННЯ
 function _hash(s) { 
-  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s.toString())
+  // Додаємо "сіль" до пароля перед хешуванням
+  var payload = s.toString() + GLOBAL_SALT;
+  
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, payload)
     .map(b=>(b<0?b+256:b).toString(16).padStart(2,'0')).join(''); 
 }
 
-function generateHashForTable() { 
-  Logger.log(_hash("admin000admin")); 
+// ДОПОМІЖНА ФУНКЦІЯ ДЛЯ ОТРИМАННЯ НОВИХ ХЕШІВ
+// Запустіть її вручну в редакторі, щоб дізнатися, що вписати в таблицю
+function generateNewHashHelper() { 
+  var password = "admin"; // <-- Впишіть сюди пароль користувача
+  Logger.log("НОВИЙ ХЕШ для '" + password + "': " + _hash(password)); 
+}
+
+// --- НОРМАЛІЗАЦІЯ ТЕЛЕФОНУ/ЛОГІНУ ---
+function _normalizeLogin(login) {
+  if (!login) return null;
+  var cleaned = login.toString().trim();
+  
+  if (cleaned.includes('@')) {
+    // Якщо це схоже на пошту
+    return cleaned.toLowerCase();
+  }
+  
+  // Якщо це телефон: видаляємо всі нецифрові символи
+  cleaned = cleaned.replace(/\D/g, ''); 
+
+  // Якщо телефон починається з міжнародного коду України (380...)
+  if (cleaned.length === 12 && cleaned.startsWith('380')) {
+    return cleaned;
+  } 
+  // Якщо телефон починається з 0 (наприклад, 0991234567)
+  else if (cleaned.length === 10 && cleaned.startsWith('0')) {
+    return '38' + cleaned;
+  }
+  
+  // В інших випадках повертаємо як є (може бути ID або інший формат)
+  return cleaned;
 }

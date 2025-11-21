@@ -1,29 +1,29 @@
 <div style="padding:20px; max-width:900px; margin:0 auto;">
   <div class="dashboard-grid">
 
-    <div class="module-card" @click="$root.navigate('grading', 'Журнал')" x-show="$root.can('grading')">
+    <div class="module-card" @click="navigate('grading', 'Журнал')" x-show="canAccess('grading')">
       <span class="material-icons-round module-icon" style="color:#1976d2">edit_note</span>
       <div class="module-title">Журнал</div>
     </div>
 
-    <div class="module-card" @click="$root.navigate('schedule', 'Розклад')" x-show="$root.can('schedule')">
+    <div class="module-card" @click="navigate('schedule', 'Розклад')" x-show="canAccess('schedule')">
       <span class="material-icons-round module-icon" style="color:#7b1fa2">calendar_today</span>
       <div class="module-title">Розклад</div>
     </div>
 
-    <div class="module-card" @click="$root.navigate('load', 'Навантаження')" x-show="$root.can('load')">
+    <div class="module-card" @click="navigate('load', 'Навантаження')" x-show="canAccess('load')">
       <span class="material-icons-round module-icon" style="color:#ef6c00">pie_chart</span>
       <div class="module-title">Навантаження</div>
     </div>
 
-    <div class="module-card" @click="$root.navigate('students', 'Студенти')" x-show="$root.can('students')">
+    <div class="module-card" @click="navigate('students', 'Студенти')" x-show="canAccess('students')">
       <span class="material-icons-round module-icon" style="color:#2e7d32">group</span>
       <div class="module-title">Студенти</div>
     </div>
 
     <div class="module-card" 
-         @click="$root.navigate('admin', 'Адміністратор')" 
-         x-show="$root.user.role === 'admin' || $root.can('admin')" 
+         @click="navigate('admin', 'Адміністратор')" 
+         x-show="canAccess('admin')" 
          style="border-left:4px solid #2c3e50;">
       <span class="material-icons-round module-icon" style="color:#2c3e50">settings</span>
       <div class="module-title">Адмін Панель</div>
