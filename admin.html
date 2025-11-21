@@ -1,0 +1,126 @@
+<div x-data="adminPanel()" x-init="initAdmin()" style="max-width:800px; margin:0 auto; padding:10px;">
+  
+  <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px;">
+    <button class="module-card" style="height:auto; padding:10px 20px; font-size:14px; width:auto;" 
+            :style="tab === 'users' ? 'background:#2c3e50; color:white;' : ''"
+            @click="tab = 'users'">
+       👥 Юзери
+    </button>
+    <button class="module-card" style="height:auto; padding:10px 20px; font-size:14px; width:auto;" 
+            :style="tab === 'roles' ? 'background:#2c3e50; color:white;' : ''"
+            @click="tab = 'roles'">
+       🛡️ Права
+    </button>
+  </div>
+
+  <div x-show="tab === 'users'">
+    <table style="width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden;">
+      <tr style="background:#f8f9fa; text-align:left; border-bottom:2px solid #eee;">
+        <th style="padding:10px;">Ім'я</th>
+        <th style="padding:10px;">Роль</th>
+        <th style="padding:10px;">Дія</th>
+      </tr>
+      <template x-for="u in users" :key="u.id">
+        <tr style="border-bottom:1px solid #eee;">
+          <td style="padding:10px;">
+             <div x-text="u.name" style="font-weight:bold; font-size:14px;"></div>
+             <div x-text="'ID: ' + u.id" style="font-size:11px; color:#999;"></div>
+          </td>
+          <td style="padding:10px;">
+            <select x-model="u.role" style="padding:5px; border-radius:4px; border:1px solid #ddd;">
+              <option value="">(User)</option>
+              <option value="admin">Admin</option>
+              <option value="teacher">Teacher</option>
+              <option value="methodist">Methodist</option>
+            </select>
+          </td>
+          <td style="padding:10px;">
+            <button @click="saveUserRole(u)" style="padding:5px 10px; background:#1a73e8; color:white; border:none; border-radius:4px; cursor:pointer;">Save</button>
+          </td>
+        </tr>
+      </template>
+    </table>
+  </div>
+
+  <div x-show="tab === 'roles'" style="display:flex; gap:15px; align-items:flex-start; flex-wrap:wrap;">
+    
+    <div style="width: 160px; flex-shrink:0;">
+      <div style="font-size:12px; font-weight:bold; color:#999; margin-bottom:5px;">ОБЕРІТЬ РОЛЬ:</div>
+      <template x-for="r in rolesConfig" :key="r.name">
+        <div @click="selectEntity(r)" 
+             class="module-card" 
+             style="height:auto; padding:10px; margin-bottom:5px; text-align:left; align-items:center; flex-direction:row; justify-content:space-between;"
+             :style="selectedEntity.name === r.name ? 'border-color:#1a73e8; background:#f0f7ff;' : ''">
+          <div style="font-weight:bold; font-size:13px;" x-text="r.name"></div>
+        </div>
+      </template>
+      <button @click="addNewEntity()" style="width:100%; margin-top:5px; padding:8px; border:1px dashed #ccc; background:none; cursor:pointer; font-size:11px; color:#666;">+ Додати</button>
+    </div>
+
+    <div style="flex:1; background:white; padding:20px; border-radius:12px; min-width:250px;" x-show="selectedEntity.name">
+      <h3 style="margin-top:0; padding-bottom:10px; border-bottom:1px solid #eee;">
+        Права: <span x-text="selectedEntity.name" style="color:#1a73e8;"></span>
+      </h3>
+
+      <template x-for="cat in getCategories()" :key="cat">
+        <div style="margin-bottom:15px;">
+          <div style="font-size:11px; font-weight:bold; color:#999; margin-bottom:5px; text-transform:uppercase;" x-text="cat"></div>
+          <div style="display:grid; grid-template-columns: 1fr; gap:5px;">
+            <template x-for="cap in capabilities.filter(c => c.category === cat)" :key="cap.key">
+              <label style="display:flex; align-items:center; gap:10px; padding:6px; background:#f9f9f9; border-radius:4px; cursor:pointer;">
+                <input type="checkbox" :value="cap.key" x-model="selectedEntity.permissions">
+                <span x-text="cap.label" style="font-size:13px;"></span>
+              </label>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <div style="margin-top:20px; padding-top:10px; border-top:1px solid #eee;">
+        <button class="btn-primary" @click="saveCurrentRoleConfig()">Зберегти налаштування</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function adminPanel() {
+      return {
+        tab: 'users', users: [], rolesConfig: [], capabilities: [],
+        selectedEntity: {name:'', permissions:[]},
+
+        initAdmin() {
+          this.loadUsers(); this.loadRoles(); this.loadCapabilities();
+        },
+        loadUsers() { google.script.run.withSuccessHandler(res => this.users = res).apiGetUsers(); },
+        loadRoles() { google.script.run.withSuccessHandler(res => {
+            this.rolesConfig = res;
+            if(res.length > 0 && !this.selectedEntity.name) this.selectEntity(res[0]);
+        }).apiGetRolesConfig(); },
+        loadCapabilities() { google.script.run.withSuccessHandler(res => this.capabilities = res).apiGetSystemCapabilities(); },
+        
+        getCategories() { return [...new Set(this.capabilities.map(c => c.category))]; },
+        selectEntity(r) { this.selectedEntity = JSON.parse(JSON.stringify(r)); },
+        
+        saveUserRole(u) {
+          app().showToast("Збереження...");
+          google.script.run.withSuccessHandler(res => app().showToast(res.msg)).apiUpdateUserRole(u.id, u.role);
+        },
+        saveCurrentRoleConfig() {
+          app().showToast("Оновлення прав...");
+          let idx = this.rolesConfig.findIndex(r => r.name === this.selectedEntity.name);
+          if(idx >= 0) this.rolesConfig[idx].permissions = this.selectedEntity.permissions;
+          else this.rolesConfig.push(this.selectedEntity);
+          google.script.run.withSuccessHandler(res => app().showToast(res.msg)).apiSaveRoleConfig(this.selectedEntity.name, this.selectedEntity.permissions);
+        },
+        addNewEntity() {
+           let name = prompt("Введіть назву Ролі (english):");
+           if(name) {
+             let newE = {name: name, permissions: []};
+             this.rolesConfig.push(newE); this.selectEntity(newE);
+           }
+        }
+      }
+    }
+  </script>
+</div>

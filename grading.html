@@ -1,0 +1,27 @@
+<div style="padding: 20px; display: flex; flex-direction: column; align-items: center;">
+  
+  <div style="width: 100%; max-width: 600px; margin-bottom: 20px;">
+    <input type="text" x-model="topic" style="width:100%; padding:15px; border:2px solid #e0e0e0; border-radius:10px; outline:none; transition:0.3s;" placeholder="✏️ Введіть тему уроку..." onfocus="this.style.borderColor='#2c3e50'" onblur="this.style.borderColor='#e0e0e0'">
+  </div>
+
+  <div style="text-align:center; color:#888; font-size:13px; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">Панель оцінювання</div>
+  
+  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; max-width: 500px;">
+    <button class="module-card" style="height:auto; padding:15px; background:#f1f8e9; color:#2e7d32; border:1px solid #c8e6c9;" @click="sendMark(12)">12</button>
+    <button class="module-card" style="height:auto; padding:15px; background:#f1f8e9; color:#2e7d32; border:1px solid #c8e6c9;" @click="sendMark(11)">11</button>
+    <button class="module-card" style="height:auto; padding:15px; background:#f1f8e9; color:#2e7d32; border:1px solid #c8e6c9;" @click="sendMark(10)">10</button>
+    <button class="module-card" style="height:auto; padding:15px; background:#e3f2fd; color:#1565c0; border:1px solid #bbdefb;" @click="sendMark(9)">9</button>
+    
+    <button class="module-card" style="height:auto; padding:15px; background:#e3f2fd; color:#1565c0; border:1px solid #bbdefb;" @click="sendMark(8)">8</button>
+    <button class="module-card" style="height:auto; padding:15px; background:#e3f2fd; color:#1565c0; border:1px solid #bbdefb;" @click="sendMark(7)">7</button>
+    <button class="module-card" style="height:auto; padding:15px; background:#fff3e0; color:#e65100; border:1px solid #ffe0b2;" @click="sendMark(6)">6</button>
+    <button class="module-card" style="height:auto; padding:15px; background:#fff3e0; color:#e65100; border:1px solid #ffe0b2;" @click="sendMark(5)">5</button>
+    
+    <button class="module-card" style="height:auto; padding:15px; background:#fff3e0; color:#e65100; border:1px solid #ffe0b2;" @click="sendMark(4)">4</button>
+    <button class="module-card" style="height:auto; padding:15px;" @click="sendMark(3)">3</button>
+    <button class="module-card" style="height:auto; padding:15px;" @click="sendMark(2)">2</button>
+    
+    <button class="module-card" style="height:auto; padding:15px; background:#ffebee; color:#c62828; border:1px solid #ffcdd2;" @click="sendMark('Н')">Н</button>
+  </div>
+
+</div>
