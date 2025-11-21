@@ -1,225 +1,113 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <base target="_top">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Teacher System</title>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-
-  <style>
-    [x-cloak] { display: none !important; }
-    body { margin: 0; font-family: 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; }
-    * { box-sizing: border-box; }
-
-    /* --- ЕКРАН ВХОДУ --- */
-    .login-center { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.08); width: 100%; max-width: 360px; }
-    input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #e0e0e0; font-size: 16px; outline: none; transition: 0.2s; }
-    input:focus, select:focus { border-color: #1a73e8; background: #f8fdff; }
-    .btn-primary { width: 100%; padding: 14px; margin-top: 10px; background: #1a73e8; color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 16px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2); }
-    .btn-primary:active { transform: scale(0.98); }
-
-    /* --- ШАПКА (Оновлена) --- */
-    header { 
-      background: #2c3e50; 
-      color: white; 
-      height: 64px; 
-      display: flex; 
-      align-items: center; 
-      padding: 0 15px; 
-      box-shadow: 0 2px 12px rgba(0,0,0,0.1); 
-      flex-shrink: 0; 
-      gap: 10px;
-      position: relative;
-      z-index: 50;
-    }
+<div x-data="adminModule()" x-init="init()">
+  
+  <div x-show="subView === 'menu'" style="padding:20px;">
+    <h3 style="color:#666; margin-top:0;">Панель Адміністратора</h3>
     
-    /* КНОПКА НАЗАД */
-    .nav-back-btn {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: white;
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      flex-shrink: 0;
-    }
-    .nav-back-btn:hover { background: rgba(255, 255, 255, 0.25); transform: translateX(-2px); border-color: rgba(255, 255, 255, 0.5); }
-    .nav-back-btn:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.1); }
-    .nav-back-btn .material-icons-round { font-size: 20px; }
-
-    .header-title { flex: 1; font-size: 17px; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
-    
-    /* КНОПКА ВИХІД */
-    .btn-logout {
-      background: transparent;
-      color: rgba(255, 255, 255, 0.8);
-      border: none; padding: 8px; border-radius: 8px;
-      cursor: pointer; transition: 0.2s; display: flex; align-items: center;
-    }
-    .btn-logout:hover { background: rgba(255, 255, 255, 0.15); color: white; }
-
-    /* --- BODY --- */
-    .app-body { flex: 1; overflow-y: auto; background: #f0f2f5; }
-
-    /* Стилі модулів (для Dashboard) */
-    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; padding: 20px; max-width: 800px; margin: 0 auto; }
-    .module-card {
-      background: white; border-radius: 16px; padding: 20px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer; transition: all 0.2s; border: 1px solid transparent; height: 140px;
-      position: relative; overflow: hidden;
-    }
-    .module-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
-    .module-card:active { transform: scale(0.97); }
-    .module-icon { font-size: 36px; margin-bottom: 12px; color: #444; transition: 0.2s; }
-    .module-title { font-weight: 700; color: #333; font-size: 14px; }
-    
-    .mod-blue .module-icon { color: #1976d2; } .mod-blue:hover { border-color: #1976d2; }
-    .mod-green .module-icon { color: #2e7d32; } .mod-green:hover { border-color: #2e7d32; }
-    .mod-orange .module-icon { color: #ef6c00; } .mod-orange:hover { border-color: #ef6c00; }
-    .mod-purple .module-icon { color: #7b1fa2; } .mod-purple:hover { border-color: #7b1fa2; }
-
-    /* Toast */
-    .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #222; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.2); pointer-events: none;}
-    .error-text { color: #d32f2f; text-align: center; font-size: 13px; margin-top: 10px; }
-  </style>
-</head>
-
-<body x-data="app()" x-cloak>
-
-  <template x-if="!isLoggedIn">
-    <div class="login-center">
-      <div class="card">
-        <h2 style="text-align:center; color:#2c3e50; font-weight:800; margin-bottom:20px;">Teacher ID</h2>
-        
-        <label style="font-size:12px; color:#666; font-weight:600; margin-left:4px;">Хто ви?</label>
-        <select x-model="form.id" :disabled="loading">
-          <option value="">Оберіть зі списку...</option>
-          <template x-for="u in loginList" :key="u.id"><option :value="u.id" x-text="u.name"></option></template>
-        </select>
-        
-        <label style="font-size:12px; color:#666; font-weight:600; margin-left:4px; margin-top:10px; display:block;">Пароль</label>
-        <input type="password" x-model="form.pass" placeholder="••••••" @keyup.enter="login()">
-        
-        <button class="btn-primary" @click="login()" :disabled="loading">
-          <span x-text="loading ? 'Вхід...' : 'Увійти'"></span>
-        </button>
-        <div class="error-text" x-text="errorMsg"></div>
-      </div>
-    </div>
-  </template>
-
-  <template x-if="isLoggedIn">
-    <div style="display: flex; flex-direction: column; height: 100%;">
+    <div class="dashboard-grid">
       
-      <header>
-        <template x-if="history.length > 0">
-          <button class="nav-back-btn" @click="goBack()">
-            <span class="material-icons-round">arrow_back</span>
-          </button>
-        </template>
-        <template x-if="history.length === 0"><div style="width:38px;"></div></template>
-
-        <div class="header-title" x-text="pageTitle"></div>
-
-        <div style="width:38px; display:flex; justify-content:flex-end;">
-           <button class="btn-logout" @click="logout()">
-             <span class="material-icons-round">logout</span>
-           </button>
-        </div>
-      </header>
-
-      <div class="app-body">
-        
-        <template x-if="currentView === 'dashboard'">
-           <?!= include('dashboard'); ?>
-        </template>
-
-        <template x-if="currentView === 'grading'">
-           <?!= include('grading'); ?>
-        </template>
-
-        <template x-if="currentView === 'schedule'">
-           <?!= include('schedule'); ?>
-        </template>
-
-        <template x-if="currentView === 'admin'">
-           <?!= include('admin'); ?>
-        </template>
+      <div class="module-card" 
+           @click="subView = 'access'" 
+           x-show="$root.can('action_access_ctrl')"
+           style="border-left:4px solid #d32f2f;">
+        <span class="material-icons-round module-icon" style="color:#d32f2f;">lock_person</span>
+        <div class="module-title">Керування Доступом</div>
+        <div style="font-size:12px; color:#999;">Ролі та Права</div>
+      </div>
 
       </div>
-    </div>
-  </template>
+  </div>
 
-  <div x-show="toastMsg" x-transition.opacity class="toast" x-text="toastMsg"></div>
+  <div x-show="subView === 'access'" style="padding:10px; max-width:900px; margin:0 auto;">
+    <button @click="subView = 'menu'" style="background:none; border:none; cursor:pointer; display:flex; align-items:center; color:#666; margin-bottom:10px;">
+      <span class="material-icons-round">arrow_back</span> Назад в меню
+    </button>
+
+    <div style="display:flex; gap:20px;">
+      
+      <div style="width:200px; flex-shrink:0;">
+        <div style="font-weight:bold; margin-bottom:10px; color:#444;">Суб'єкт права:</div>
+        
+        <template x-for="r in roles" :key="r.name">
+          <div @click="select(r)" class="list-item" :class="{'active': selected.name === r.name}">
+            <span class="material-icons-round" style="font-size:16px;">badge</span>
+            <span x-text="r.name"></span>
+          </div>
+        </template>
+        
+        <button @click="addRole()" style="width:100%; margin-top:10px; padding:8px; border:1px dashed #ccc; background:none;">+ Додати Роль</button>
+      </div>
+
+      <div style="flex:1; background:white; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.05);" x-show="selected.name">
+        <h3 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">
+          Права для: <span x-text="selected.name" style="color:#1a73e8;"></span>
+        </h3>
+
+        <template x-for="cat in getCategories()" :key="cat">
+          <div style="margin-bottom:20px;">
+            <div style="font-size:11px; font-weight:bold; color:#999; text-transform:uppercase; margin-bottom:5px;" x-text="cat"></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:5px;">
+              
+              <template x-for="cap in config.capabilities.filter(c => c.category === cat)" :key="cap.key">
+                <label style="display:flex; align-items:center; gap:10px; padding:8px; background:#f9f9f9; border-radius:4px; cursor:pointer;">
+                  <input type="checkbox" :value="cap.key" x-model="selected.perms">
+                  <span style="font-size:13px;" x-text="cap.label"></span>
+                </label>
+              </template>
+
+            </div>
+          </div>
+        </template>
+
+        <button class="btn-primary" @click="save()">Зберегти права</button>
+      </div>
+
+    </div>
+  </div>
 
   <script>
-    function app() {
+    function adminModule() {
       return {
-        isLoggedIn: false, loading: false, loginList: [], errorMsg: '', toastMsg: '',
-        user: { name: '', id: '', role: '', permissions: [] }, // Додані поля для прав
-        form: { id: '', pass: '' }, topic: '',
-        currentView: 'dashboard', pageTitle: 'Головна', history: [],
+        subView: 'menu',
+        roles: [],
+        selected: { name:'', perms:[] },
+        config: { capabilities: [] },
 
         init() {
-          const token = localStorage.getItem('auth_token');
-          if (token) this.checkSession(token); else this.loadList();
+          this.config = this.$root.config; // Беремо конфіг з ядра
+          this.loadRoles();
         },
-
-        // --- ПЕРЕВІРКА ПРАВ (НОВЕ) ---
-        canAccess(module) {
-          if (!this.isLoggedIn) return false;
-          // Адмін або роль пуста або "*" -> доступ до всього
-          if (!this.user.role || this.user.role.toLowerCase() === 'admin') return true;
-          if (this.user.permissions.includes('*')) return true;
-          // Перевірка конкретного права
-          return this.user.permissions.includes(module);
-        },
-
-        navigate(view, title) {
-          this.history.push({ view: this.currentView, title: this.pageTitle });
-          this.currentView = view; this.pageTitle = title;
-        },
-        goBack() {
-          if (this.history.length === 0) return;
-          const prev = this.history.pop();
-          this.currentView = prev.view; this.pageTitle = prev.title;
-        },
-        loadList() {
-          this.loading = true;
-          google.script.run.withSuccessHandler(d => { this.loginList = d; this.loading = false; }).getLoginList();
-        },
-        login() {
-          this.loading = true; this.errorMsg = '';
-          google.script.run.withSuccessHandler(res => {
-            this.loading = false;
-            if(res.success) { localStorage.setItem('auth_token', res.token); this.setUser(res.user); }
-            else this.errorMsg = res.msg;
-          }).apiLogin(this.form.id, this.form.pass);
-        },
-        checkSession(token) {
-          google.script.run.withSuccessHandler(res => {
-            if(res.success) this.setUser(res.user); else this.logout();
-          }).apiMe(token);
-        },
-        logout() {
-          localStorage.removeItem('auth_token');
-          this.isLoggedIn = false; this.history = []; this.currentView = 'dashboard'; this.loadList();
-        },
-        setUser(u) { this.user = u; this.isLoggedIn = true; this.currentView = 'dashboard'; this.pageTitle = 'Головна'; },
         
-        sendMark(val) {
-          if(!this.topic) { this.showToast("⚠️ Вкажіть тему!"); return; }
-          this.showToast("⏳ Збереження...");
-          const token = localStorage.getItem('auth_token');
-          google.script.run.withSuccessHandler(r => this.showToast(r)).apiSaveLog(token, val, this.topic);
+        loadRoles() {
+          google.script.run.withSuccessHandler(res => this.roles = res).apiGetRoles();
         },
-        showToast(msg) { this.toastMsg = msg; setTimeout(() => this.toastMsg = '', 3000); }
+        
+        select(r) { this.selected = JSON.parse(JSON.stringify(r)); },
+        
+        getCategories() {
+          return [...new Set(this.config.capabilities.map(c => c.category))];
+        },
+
+        save() {
+          this.$root.notify("Збереження...");
+          google.script.run.withSuccessHandler(res => {
+            this.$root.notify("Збережено");
+            this.loadRoles();
+          }).apiSaveRole(this.selected.name, this.selected.perms);
+        },
+
+        addRole() {
+          let name = prompt("Назва ролі (напр. methodist):");
+          if(name) {
+            let newRole = {name: name, perms:[]};
+            this.roles.push(newRole);
+            this.selected = newRole;
+          }
+        }
       }
     }
   </script>
-</body>
-</html>
+  <style>
+    .list-item { padding:10px; background:white; margin-bottom:5px; border-radius:6px; cursor:pointer; display:flex; gap:8px; align-items:center; border:1px solid transparent; }
+    .list-item.active { border-color:#1a73e8; background:#e8f0fe; color:#1a73e8; font-weight:bold; }
+  </style>
+</div>

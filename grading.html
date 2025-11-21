@@ -1,27 +1,57 @@
-<div style="padding: 20px; display: flex; flex-direction: column; align-items: center;">
+<div x-data="gradingModule()" x-init="init()" style="padding: 20px; display: flex; flex-direction: column; align-items: center;">
   
-  <div style="width: 100%; max-width: 600px; margin-bottom: 20px;">
-    <input type="text" x-model="topic" style="width:100%; padding:15px; border:2px solid #e0e0e0; border-radius:10px; outline:none; transition:0.3s;" placeholder="✏️ Введіть тему уроку..." onfocus="this.style.borderColor='#2c3e50'" onblur="this.style.borderColor='#e0e0e0'">
+  <div style="width: 100%; max-width: 500px; margin-bottom: 20px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+    
+    <select x-model="selectedClass" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+      <option value="">📂 Оберіть клас...</option>
+      <option value="9-A">9-А клас</option>
+      <option value="10-B">10-Б клас</option>
+    </select>
+
+    <div x-show="selectedClass">
+      <select x-model="selectedStudent" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px; font-weight:bold;">
+        <option value="">👤 Оберіть учня...</option>
+        <option value="Петренко І.">Петренко І.</option>
+        <option value="Сидоров П.">Сидоров П.</option>
+      </select>
+    </div>
+
+    <input type="text" x-model="topic" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;" placeholder="✏️ Тема уроку...">
   </div>
 
-  <div style="text-align:center; color:#888; font-size:13px; margin-bottom:10px; text-transform:uppercase; letter-spacing:1px;">Панель оцінювання</div>
-  
-  <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; max-width: 500px;">
-    <button class="module-card" style="height:auto; padding:15px; background:#f1f8e9; color:#2e7d32; border:1px solid #c8e6c9;" @click="sendMark(12)">12</button>
-    <button class="module-card" style="height:auto; padding:15px; background:#f1f8e9; color:#2e7d32; border:1px solid #c8e6c9;" @click="sendMark(11)">11</button>
-    <button class="module-card" style="height:auto; padding:15px; background:#f1f8e9; color:#2e7d32; border:1px solid #c8e6c9;" @click="sendMark(10)">10</button>
-    <button class="module-card" style="height:auto; padding:15px; background:#e3f2fd; color:#1565c0; border:1px solid #bbdefb;" @click="sendMark(9)">9</button>
+  <div x-show="selectedStudent" x-transition.opacity style="width: 100%; max-width: 500px;">
+    <div style="text-align:center; color:#888; font-size:13px; margin-bottom:10px;">
+      Оцінка для: <b x-text="selectedStudent"></b>
+    </div>
     
-    <button class="module-card" style="height:auto; padding:15px; background:#e3f2fd; color:#1565c0; border:1px solid #bbdefb;" @click="sendMark(8)">8</button>
-    <button class="module-card" style="height:auto; padding:15px; background:#e3f2fd; color:#1565c0; border:1px solid #bbdefb;" @click="sendMark(7)">7</button>
-    <button class="module-card" style="height:auto; padding:15px; background:#fff3e0; color:#e65100; border:1px solid #ffe0b2;" @click="sendMark(6)">6</button>
-    <button class="module-card" style="height:auto; padding:15px; background:#fff3e0; color:#e65100; border:1px solid #ffe0b2;" @click="sendMark(5)">5</button>
-    
-    <button class="module-card" style="height:auto; padding:15px; background:#fff3e0; color:#e65100; border:1px solid #ffe0b2;" @click="sendMark(4)">4</button>
-    <button class="module-card" style="height:auto; padding:15px;" @click="sendMark(3)">3</button>
-    <button class="module-card" style="height:auto; padding:15px;" @click="sendMark(2)">2</button>
-    
-    <button class="module-card" style="height:auto; padding:15px; background:#ffebee; color:#c62828; border:1px solid #ffcdd2;" @click="sendMark('Н')">Н</button>
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+      <button class="module-card high" style="height:auto; padding:15px;" @click="send(12)">12</button>
+      <button class="module-card high" style="height:auto; padding:15px;" @click="send(11)">11</button>
+      <button class="module-card high" style="height:auto; padding:15px;" @click="send(10)">10</button>
+      <button class="module-card mid"  style="height:auto; padding:15px;" @click="send(9)">9</button>
+      <button class="module-card mid"  style="height:auto; padding:15px;" @click="send(8)">8</button>
+      <button class="module-card mid"  style="height:auto; padding:15px;" @click="send(7)">7</button>
+      <button class="module-card low"  style="height:auto; padding:15px;" @click="send(6)">6</button>
+      <button class="module-card low"  style="height:auto; padding:15px;" @click="send(5)">5</button>
+      <button class="module-card absent" style="height:auto; padding:15px; grid-column: span 4;" @click="send('Н')">Н</button>
+    </div>
   </div>
 
+  <script>
+    function gradingModule() {
+      return {
+        selectedClass: '', selectedStudent: '', topic: '',
+        init() {},
+        send(mark) {
+          if(!this.topic) { app().showToast("⚠️ Вкажіть тему!"); return; }
+          app().showToast("⏳ Збереження...");
+          const token = localStorage.getItem('auth_token');
+          // Передаємо ім'я учня разом з оцінкою
+          const fullInfo = this.selectedStudent + " (" + this.selectedClass + ")"; 
+          google.script.run.withSuccessHandler(res => app().showToast(res))
+            .apiSaveLog(token, mark, this.topic + " | " + fullInfo);
+        }
+      }
+    }
+  </script>
 </div>

@@ -1,27 +1,20 @@
-<div class="dashboard-grid">
+<div style="padding:20px; max-width:900px; margin:0 auto;">
+  <div class="dashboard-grid">
 
-  <div class="module-card mod-blue" @click="navigate('grading', 'Журнал оцінок')">
-    <span class="material-icons-round module-icon">edit_note</span>
-    <div class="module-title">Журнал</div>
-    <div style="font-size:12px; color:#666; margin-top:5px;">Оцінювання учнів</div>
+    <div class="module-card" @click="$root.navigate('grading')" x-show="$root.can('module_grading')">
+      <span class="material-icons-round module-icon" style="color:#1976d2">edit_note</span>
+      <div class="module-title">Журнал</div>
+    </div>
+
+    <div class="module-card" @click="$root.navigate('schedule')" x-show="$root.can('module_schedule')">
+      <span class="material-icons-round module-icon" style="color:#7b1fa2">calendar_today</span>
+      <div class="module-title">Розклад</div>
+    </div>
+
+    <div class="module-card" @click="$root.navigate('admin')" x-show="$root.can('module_admin')" style="border-left:4px solid #2c3e50;">
+      <span class="material-icons-round module-icon" style="color:#2c3e50">settings</span>
+      <div class="module-title">Адмін Панель</div>
+    </div>
+
   </div>
-
-  <div class="module-card mod-purple" @click="navigate('schedule', 'Мій Розклад')">
-    <span class="material-icons-round module-icon">calendar_today</span>
-    <div class="module-title">Розклад</div>
-    <div style="font-size:12px; color:#666; margin-top:5px;">Перегляд занять</div>
-  </div>
-
-  <div class="module-card mod-orange" @click="navigate('load', 'Навантаження')">
-    <span class="material-icons-round module-icon">pie_chart</span>
-    <div class="module-title">Навантаження</div>
-    <div style="font-size:12px; color:#666; margin-top:5px;">Статистика годин</div>
-  </div>
-
-  <div class="module-card mod-green" @click="navigate('students', 'Список студентів')">
-    <span class="material-icons-round module-icon">group</span>
-    <div class="module-title">Студенти</div>
-    <div style="font-size:12px; color:#666; margin-top:5px;">База даних</div>
-  </div>
-
 </div>
