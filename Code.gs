@@ -16,6 +16,7 @@ var TEACHER_SHEET_ID = PropertiesService.getScriptProperties().getProperty('Teac
 var AUTH_SHEET_ID    = PropertiesService.getScriptProperties().getProperty('auth');
 // Ви використовуєте 'Roles' з великої літери, тому залишаємо так:
 var ROLE_SHEET_ID    = PropertiesService.getScriptProperties().getProperty('Roles'); 
+var REG_SHEET_ID     = PropertiesService.getScriptProperties().getProperty('reg'); // 👈 ДОДАНО
 
 var AUTH_TTL_HOURS   = 168; // 7 днів
 
@@ -264,6 +265,7 @@ function apiSaveRoleConfig(name, perms) {
   }
   sheet.appendRow([name, json]); 
   return {success:true, msg:"Створено"};
+  
 }
 
 function apiUpdateUserRole(id, role) {
@@ -277,6 +279,56 @@ function apiUpdateUserRole(id, role) {
       return {success:true, msg:"Роль змінено"}; 
     } 
   }
+}
+
+// --- РЕЄСТРАЦІЯ ---
+function apiRegister(name, phone, email, password) {
+  if (!REG_SHEET_ID) {
+    return { success: false, msg: "❌ Помилка конфігурації: відсутній ID таблиці reg." };
+  }
+  if (!name || !phone || !email || !password) {
+    return { success: false, msg: "❌ Заповніть всі поля" };
+  }
+  
+  // Використовуємо нормалізацію телефону/пошти та хешування
+  var normalizedPhone = _normalizeLogin(phone);
+  var normalizedEmail = _normalizeLogin(email);
+  var passwordHash  = _hash(password);
+  
+  var ssReg = SpreadsheetApp.openById(REG_SHEET_ID);
+  var sheet = ssReg.getSheetByName('Аркуш1');
+  if (!sheet) {
+    // Створюємо аркуш, якщо його немає
+    sheet = ssReg.insertSheet('Аркуш1');
+    sheet.appendRow(['ПІБ', 'Телефон', 'Пошта', 'Хеш_Пароля', 'Дата_Заявки']);
+  }
+  
+  // Перевірка на дублікати в таблиці реєстрації
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var storedEmail = _normalizeLogin(data[i][2]);
+    var storedPhone = _normalizeLogin(data[i][1]);
+    
+    if (storedEmail === normalizedEmail) {
+      return { success: false, msg: "❌ Ця пошта вже очікує підтвердження." };
+    }
+    if (storedPhone === normalizedPhone) {
+      return { success: false, msg: "❌ Цей телефон вже очікує підтвердження." };
+    }
+  }
+
+  // Записуємо новий запис
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd.MM.yyyy HH:mm");
+  // A(PIP), B(phone), C(mail), D(pass_hash), E(date)
+  sheet.appendRow([
+    name, 
+    phone.toString().trim(), 
+    email.toString().trim(), 
+    passwordHash,
+    today
+  ]);
+
+  return { success: true, msg: "✅ Заявка подана. Очікуйте підтвердження адміністратором." };
 }
 
 // ==========================================

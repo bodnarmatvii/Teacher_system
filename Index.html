@@ -43,19 +43,51 @@
   <template x-if="!isLoggedIn">
   <div class="login-wrapper">
     <div class="card">
-      <h2 style="margin-top:0; color:#2c3e50;">Teacher System</h2>
-      
-      <input type="text" x-model="form.login" style="margin-bottom: 5px;" 
-             placeholder="📧 Пошта або 📞 Телефон" :disabled="loading" 
-             @keyup.enter="login()">
-      
-      <input type="password" x-model="form.pass" placeholder="Пароль" 
-             @keyup.enter="login()" :disabled="loading">
-      
-      <button class="btn-primary" @click="login()" :disabled="loading || !form.login || !form.pass">
-        <span x-text="loading ? '⏳' : 'Увійти'"></span>
-      </button>
-      <div class="error-text" x-text="errorMsg"></div>
+      <h2 style="margin-top:0; color:#2c3e50;" x-text="isRegistering ? 'Реєстрація' : 'Teacher System'"></h2>
+
+      <template x-if="!isRegistering">
+        <div>
+          <input type="text" x-model="form.login" style="margin-bottom: 5px;" 
+                 placeholder="📧 Пошта або 📞 Телефон" :disabled="loading" 
+                 @keyup.enter="login()">
+          
+          <input type="password" x-model="form.pass" placeholder="Пароль" 
+                 @keyup.enter="login()" :disabled="loading">
+          
+          <button class="btn-primary" @click="login()" :disabled="loading || !form.login || !form.pass">
+            <span x-text="loading ? '⏳' : 'Увійти'"></span>
+          </button>
+          
+          <div class="error-text" x-text="errorMsg"></div>
+          
+          <button @click="isRegistering = true; errorMsg=''" style="margin-top:10px; background:none; border:none; color:#1a73e8; cursor:pointer;">
+            Зареєструватися
+          </button>
+        </div>
+      </template>
+
+      <template x-if="isRegistering">
+        <div>
+          <input type="text" x-model="regForm.name" placeholder="ПІБ" :disabled="loading">
+          <input type="text" x-model="regForm.phone" placeholder="📞 Телефон" :disabled="loading">
+          <input type="email" x-model="regForm.email" placeholder="📧 Пошта" :disabled="loading">
+          
+          <input type="password" x-model="regForm.pass" placeholder="Придумайте пароль" :disabled="loading">
+          <input type="password" x-model="regForm.passConfirm" placeholder="Повторіть пароль" :disabled="loading">
+
+          <button class="btn-primary" 
+                  @click="register()" 
+                  :disabled="loading || !regForm.name || !regForm.email || !regForm.phone || !regForm.pass || !regForm.passConfirm">
+            <span x-text="loading ? '⏳' : 'Подати заявку'"></span>
+          </button>
+          
+          <div class="error-text" x-text="regMsg || 'Заявка буде розглянута адміністратором'"></div>
+          
+          <button @click="isRegistering = false; regMsg=''" style="margin-top:10px; background:none; border:none; color:#1a73e8; cursor:pointer;">
+            Повернутися до входу
+          </button>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -94,22 +126,24 @@
     return {
       isLoggedIn: false, loading: false, loginList: [], errorMsg: '', toastMsg: '',
       user: { name: '', id: '', role: '', permissions: [] },
-      form: { login: '', pass: '' }, // 👈 ЗМІНА 1: Використовуємо 'login' замість 'id'
+      form: { login: '', pass: '' }, // 👈 ЗМІНЕНА ФОРМА ВХОДУ
       currentView: 'dashboard', pageTitle: 'Головна', history: [],
+      
+      // 👈 ДОДАНО: Стан для реєстрації
+      isRegistering: false, 
+      regForm: { name: '', phone: '', email: '', pass: '', passConfirm: '' },
+      regMsg: '',
 
       init() {
         const token = localStorage.getItem('auth_token');
-        if (token) this.checkSession(token); 
-        // 👈 ЗМІНА 2: Видалено loadList(), оскільки список ID більше не потрібен
+        if (token) this.checkSession(token);
       },
 
       canAccess(module) {
         if (!this.isLoggedIn) return false;
         var r = (this.user.role || "").toLowerCase();
-        // Адмін має доступ до всього
         if (r === 'admin') return true;
         if (this.user.permissions.includes('*')) return true;
-        // Перевіряємо конкретне право
         return this.user.permissions.includes(module);
       },
 
@@ -124,7 +158,6 @@
           this.currentView = prev.view; this.pageTitle = prev.title;
         }
       },
-      // loadList() функцію видаляємо, вона більше не потрібна
       
       login() {
         this.loading = true; this.errorMsg = '';
@@ -132,8 +165,40 @@
           this.loading = false;
           if(res.success) { localStorage.setItem('auth_token', res.token); this.setUser(res.user); }
           else this.errorMsg = res.msg;
-        }).apiLogin(this.form.login, this.form.pass); // 👈 ЗМІНА 3: Передаємо this.form.login
+        }).apiLogin(this.form.login, this.form.pass);
       },
+      
+      // 👈 ДОДАНО: Функція реєстрації
+      register() {
+        this.loading = true; this.regMsg = '';
+        if (this.regForm.pass !== this.regForm.passConfirm) {
+          this.regMsg = "❌ Паролі не збігаються!"; 
+          this.loading = false; 
+          return;
+        }
+        
+        google.script.run.withSuccessHandler(res => {
+          this.loading = false;
+          this.regMsg = res.msg;
+          if(res.success) {
+            // Очищення форми після успіху
+            this.regForm = { name: '', phone: '', email: '', pass: '', passConfirm: '' };
+            this.form.login = this.regForm.email; // Автозаповнення поля логіну
+            
+            // Якщо заявка подана, повертаємось на екран входу через 3 секунди
+            if(res.msg.includes("Заявка")) {
+              setTimeout(() => { this.isRegistering = false; this.regMsg = ''; }, 3000); 
+            }
+          }
+        }).apiRegister(
+          this.regForm.name,
+          this.regForm.phone,
+          this.regForm.email,
+          this.regForm.pass
+        );
+      },
+      // 👈 /ДОДАНО
+
       checkSession(token) {
         google.script.run.withSuccessHandler(res => {
           if(res.success) this.setUser(res.user); else this.logout();
@@ -142,7 +207,6 @@
       logout() {
         localStorage.removeItem('auth_token');
         this.isLoggedIn = false; this.history = []; this.currentView = 'dashboard';
-        // loadList() більше не викликаємо
       },
       setUser(u) { this.user = u; this.isLoggedIn = true; this.currentView = 'dashboard'; this.pageTitle = 'Головна'; },
       
