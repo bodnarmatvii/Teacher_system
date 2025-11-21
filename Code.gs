@@ -1,8 +1,8 @@
 // ==========================================
-// 1. CONFIGURATION & REGISTRY (CORE)
+// 1. КОНФІГУРАЦІЯ ТА РЕЄСТР (CORE)
 // ==========================================
 
-// MASTER REGISTRY: Add new modules here, and they will appear in the Menu and Admin Panel automatically.
+// ГОЛОВНИЙ РЕЄСТР МОДУЛІВ: Додавайте сюди нові модулі, і вони з'являться всюди.
 var APP_MODULES = [
   { id: 'grading',     file: 'grading',     icon: 'edit_note',       title: 'Журнал',      desc: 'Оцінювання учнів' },
   { id: 'schedule',    file: 'schedule',    icon: 'calendar_today',  title: 'Розклад',     desc: 'Перегляд занять' },
@@ -11,21 +11,21 @@ var APP_MODULES = [
   { id: 'admin',       file: 'admin',       icon: 'admin_panel_settings', title: 'Адмін Панель', desc: 'Налаштування', role: 'admin' }
 ];
 
-// DATABASE IDs (From Script Properties)
+// ID ТАБЛИЦЬ (З властивостей скрипта)
 var TEACHER_SHEET_ID = PropertiesService.getScriptProperties().getProperty('Teachers');
 var AUTH_SHEET_ID    = PropertiesService.getScriptProperties().getProperty('auth');
-// Updated to 'Roles' as per your request
+// Ви використовуєте 'Roles' з великої літери, тому залишаємо так:
 var ROLE_SHEET_ID    = PropertiesService.getScriptProperties().getProperty('Roles'); 
 
-var AUTH_TTL_HOURS   = 168; // 7 days
+var AUTH_TTL_HOURS   = 168; // 7 днів
 
 // ==========================================
-// 2. SYSTEM FUNCTIONS
+// 2. СИСТЕМНІ ФУНКЦІЇ
 // ==========================================
 
 function doGet() {
   var template = HtmlService.createTemplateFromFile('Index');
-  // Pass the module config to the frontend
+  // Передаємо конфігурацію модулів на фронтенд
   template.modules = APP_MODULES; 
   return template.evaluate()
       .setTitle('Teacher System')
@@ -36,13 +36,13 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-// API to send config to Dashboard/Admin
+// API для отримання конфігурації на клієнті
 function apiGetModuleConfig() {
   return APP_MODULES;
 }
 
 // ==========================================
-// 3. AUTHENTICATION & PERMISSIONS (RBAC)
+// 3. АВТОРИЗАЦІЯ ТА ПРАВА (RBAC)
 // ==========================================
 
 function apiLogin(userId, passwordInput) {
@@ -98,7 +98,7 @@ function apiMe(token) {
   return {success: false, msg: "Токен не знайдено"};
 }
 
-// Core Permission Logic (Role + Individual ID)
+// Логіка збору прав (Роль + Індивідуальні ID)
 function _getPermissions(userId, roleName) {
   if (!roleName || roleName.toLowerCase() === 'admin') return ['*'];
   if (!ROLE_SHEET_ID) return [];
@@ -108,13 +108,13 @@ function _getPermissions(userId, roleName) {
   var data = sheet.getDataRange().getValues();
   var permissions = [];
 
-  // 1. Role Permissions
+  // 1. Права Ролі
   for (var i = 0; i < data.length; i++) {
     if (data[i][0].toString().toLowerCase() == roleName.toLowerCase()) {
       try { permissions = permissions.concat(JSON.parse(data[i][1])); } catch (e) {}
     }
   }
-  // 2. Individual ID Permissions
+  // 2. Права Індивідуальні (по ID)
   for (var i = 0; i < data.length; i++) {
     if (data[i][0].toString() == userId.toString()) {
       try { permissions = permissions.concat(JSON.parse(data[i][1])); } catch (e) {}
@@ -123,16 +123,16 @@ function _getPermissions(userId, roleName) {
   return [...new Set(permissions)];
 }
 
-// Dynamic Capabilities Registry for Admin Panel
+// Динамічний реєстр прав для Адмінки
 function apiGetSystemCapabilities() {
   var caps = [];
   
-  // 1. Auto-generate capabilities from Modules
+  // 1. Автоматично додаємо модулі як права
   APP_MODULES.forEach(m => {
     caps.push({ key: m.id, category: 'Модулі', label: m.title });
   });
 
-  // 2. Add granular action permissions
+  // 2. Додаємо специфічні дії
   caps.push(
     { key: 'can_edit_marks', category: 'Дії', label: 'Редагування оцінок' },
     { key: 'can_delete_marks', category: 'Дії', label: 'Видалення оцінок' },
@@ -143,7 +143,7 @@ function apiGetSystemCapabilities() {
 }
 
 // ==========================================
-// 4. MODULE APIs
+// 4. API МОДУЛІВ
 // ==========================================
 
 // --- LOGS & GRADING ---
